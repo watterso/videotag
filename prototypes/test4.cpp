@@ -12,14 +12,14 @@ string NumberToString ( int Number )
     ss << Number;
     return ss.str();
 }
-
+string people[7] ={"Tyler", "Simon", "Ricky", "Evan", "George", "Sean", "Harrison"};
 int main(int argc, const char *argv[]) {
     if (argc != 3) {
         cout << "usage: " << argv[0] << " <invideo> <outdir>" << endl;
 	}
 	string fn_haar = "haarcascades/haarcascade_frontalface_alt.xml";
     Ptr<FaceRecognizer> model = createFisherFaceRecognizer(10, 12000);
-	model->load("save.csv");
+	model->load("../model.yaml");
 	CascadeClassifier haar_cascade;
     haar_cascade.load(fn_haar);
     // Get a handle to the Video device:
@@ -67,7 +67,7 @@ int main(int argc, const char *argv[]) {
             // First of all draw a green rectangle around the detected face:
             rectangle(original, face_i, CV_RGB(0, 255,0), 1);
             // Create the text we will annotate the box with:
-            string box_text = format("Prediction = %d", prediction);
+            string box_text = format("Prediction = (%d)", prediction);
             // Calculate the position for annotated text (make sure we don't
             // put illegal values in there):
             int pos_x = std::max(face_i.tl().x - 10, 0);

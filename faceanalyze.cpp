@@ -58,6 +58,13 @@ static void read_csv(const string& filename, vector<Mat>& images, vector<int>& l
     }
 }
 
+String NumberToString ( int Number )
+{
+    ostringstream ss;
+    ss << Number;
+    return ss.str();
+}
+
 int getdir (string dir, vector<string> &files){
     DIR *dp;
     struct dirent *dirp;
@@ -74,14 +81,16 @@ int getdir (string dir, vector<string> &files){
 }
 
 int load = 0;
+String face_cascade_name = "haarcascades/haarcascade_frontalface_alt.xml";
+CascadeClassifier face_cascade;
 int main(int argc, const char *argv[]){
+	if( !face_cascade.load( face_cascade_name ) ){ printf("--(!)Error loading\n"); return -1; };
     if (argc < 3) {
-        //cout << "usage: " << argv[0] << " <csv.ext data set> <image directory> [facerecognizerYAML] " << endl;
+        cout << "usage: " << argv[0] << " <csv.ext data set> <image directory> [facerecognizerYAML 1 - load 2-load/save] " << endl;
         exit(1);
     }
-	cout<< argc<<endl;
 	if(argc==4){
-		load =argv[3];
+		load =atoi(argv[3]);
 		load--;
 		cout<<"load: "<<load<<endl;
 	}
@@ -141,28 +150,55 @@ int main(int argc, const char *argv[]){
 	if(load==1){
 		model->load("model.yaml");
 	}
+	int maxLabel = 0;
+	for (int i =0; i<labels.size(); i++) {
+		if(labels[i]>maxLabel){
+			maxLabel = labels[i];
+		}
+	}
+	maxLabel++; //get the next highest
+	cout<<images.size()<<" | "<<labels.size()<<endl;
     model->train(images, labels);
+	vector<Mat> newFaces = vector<Mat>();
 	vector<Mat> imgUpdate = vector<Mat>();
 	vector<int> labelUpdate = vector<int>();
 	for(int i = 0; i<input.size(); i++){
 		double confidence = 0.0;
 		model->predict(input[i].frame,input[i].identity, confidence);
+		cout <<"Predicted class for "<< input[i].path<<" = "<< input[i].identity<< " ("<<confidence<<") "<<endl;
 		if(confidence<=8000){
 		cout <<"Predicted class for "<< input[i].path<<" = "<< input[i].identity<< " ("<<confidence<<") "<<endl;
 			imgUpdate.push_back(input[i].frame);
 			labelUpdate.push_back(input[i].identity);
 		}else{
+			//check if it is a new face
 			Image temp1 = input[input.size()-1];
 			input[input.size()-1] = input[i];
 			input[i] = temp1;					//get rid of input[i]
-			input.pop_back();
+			temp1 = input[input.size()-1];
+			vector<Rect> faces;
+			Mat grayFrame =  norm_0_255( temp1.frame);
+			equalizeHist( grayFrame, grayFrame );
+			face_cascade.detectMultiScale( grayFrame, faces, 1.1, 2, 0|CV_HAAR_SCALE_IMAGE, Size(30, 30) );
+			if(faces.size()>0){
+				newFaces.push_back(temp1.frame);
+			}
 			i--;
+			input.pop_back();
 		}
     }
-	model->train(imgUpdate, labelUpdate);
+	
+	//programatically add 'newFaces' here
+	
+
+	if(imgUpdate.size()<0){
+		cout<<imgUpdate.size()<<" | "<<labelUpdate.size()<<endl;
+		model->train(imgUpdate, labelUpdate);
+	}
+	
+	model->save("model.yaml");
 	if(load>0){
-		cout<<"load: "<<load<<endl;
-		model->save("model.yaml");
+		cout<<"save: "<<load<<endl;
 	}
 }
 
